@@ -15,7 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 18
-          # cache: npm   # removed to avoid lock file error
       - run: npm install
       - name: Type check
         run: npx tsc --noEmit
@@ -29,6 +28,8 @@ jobs:
         with:
           node-version: 18
       - run: npm install
+      - name: Install web dependencies
+        run: npx expo install react-native-web react-dom @expo/metro-runtime
       - name: Export web
         run: npx expo export:web
       - uses: actions/upload-artifact@v4
@@ -57,6 +58,28 @@ jobs:
         with:
           packages: 'platforms;android-34 build-tools;34.0.0'
 
+      # Create missing asset files (if not present) – required for prebuild
+      - name: Ensure assets folder exists
+        run: |
+          mkdir -p assets
+          if [ ! -f assets/icon.png ]; then
+            echo "Creating placeholder icon.png"
+            # Create a 1x1 transparent PNG (base64)
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" | base64 -d > assets/icon.png
+          fi
+          if [ ! -f assets/adaptive-icon.png ]; then
+            echo "Creating placeholder adaptive-icon.png"
+            cp assets/icon.png assets/adaptive-icon.png
+          fi
+          if [ ! -f assets/splash.png ]; then
+            echo "Creating placeholder splash.png"
+            cp assets/icon.png assets/splash.png
+          fi
+          if [ ! -f assets/favicon.png ]; then
+            echo "Creating placeholder favicon.png"
+            cp assets/icon.png assets/favicon.png
+          fi
+
       - name: Prebuild Android
         run: npx expo prebuild --platform android --clean
 
@@ -70,5 +93,3 @@ jobs:
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-
-  # desktop and deploy steps are commented out – no build-desktop, no deploy-web
